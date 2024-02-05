@@ -1,0 +1,17 @@
+/*
+ ============================================================================
+ Name        : mc2.c
+ Author      : Omar Adel
+ Description : MICROController 2 for final project
+ Date        : 22 / 06 / 2022
+ ============================================================================
+ */
+
+#include <util/delay.h> /* For the delay functions */
+
+
+int main(void)
+{
+
+
+}

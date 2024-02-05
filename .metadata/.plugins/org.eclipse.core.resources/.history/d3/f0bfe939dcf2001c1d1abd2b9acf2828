@@ -1,0 +1,17 @@
+ /******************************************************************************
+ *
+ * Module: Timer
+ *
+ * File Name: timer.h
+ *
+ * Description: Header file for the AVR Timer driver
+ *
+ * Author: Omar Adel
+ *
+ *******************************************************************************/
+#ifndef TIMER_H_
+#define TIMER_H_
+
+
+
+#endif /* TIMER_H_ */

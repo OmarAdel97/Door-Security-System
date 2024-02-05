@@ -1,0 +1,342 @@
+/*
+ ============================================================================
+ Name        : mc1.c
+ Author      : Omar Adel
+ Description : MicroController 1 for final project
+ Date        : 24 / 06 / 2022
+ ============================================================================
+ */
+
+#include <util/delay.h> /* For the delay functions */
+#include "keypad.h"
+#include "lcd.h"
+#include "uart.h"
+
+/*******************************************************************************
+ *                                Definitions                                  *
+ *******************************************************************************/
+#define ACK 0x09
+#define MC1_DONE 0x11
+#define MC2_READY 0x19
+#define PASS_COMP 0x12
+#define NOT_EQUAL 0x13
+#define EQUAL 0x14
+#define OPEN_DOOR 0x15
+#define CHANGE_PASS 0x17
+
+/*******************************************************************************
+ *                        Functions Prototypes                                 *
+ *******************************************************************************/
+void enterPassword(void);
+void reEnterPassword(void);
+void passCompare(void);
+void savePass(void);
+void openDoor(void);
+void changePass(void);
+//void Timer_Counter1(void);
+/*******************************************************************************
+ *                          Global Variables                                   *
+ *******************************************************************************/
+uint16 tick = 0;
+uint8 passArray[5];
+uint8 rePassArray[5];
+uint8 counter;
+unsigned char key;
+typedef enum FLAG
+{
+	MATCH,NOT_MATCH
+}FLAG;
+
+typedef enum PASS
+{
+	CORRECT,NOT_CORRECT
+}PASS;
+
+
+FLAG flag = MATCH;
+PASS pass = CORRECT;
+
+//TIMER_ConfigType config_timePtr = {NORMAL,INIT_0,0,F_CPU_1024};
+
+int main(void)
+{
+	//TIMER_setCallBack(Timer_Counter1);
+
+	/* Initialize the UART Driver */
+//	UART_ConfigType CONFIG_Ptr = {ASYNCHRONOUS,RATE_9600,ENABLED_EVEN,STOP_2bit,BitNumber_8};
+//	UART_init(&CONFIG_Ptr);
+
+	UART_ConfigType *PTR ;
+	PTR->synchType = ASYNCHRONOUS;
+	PTR->baud_rate = RATE_9600;
+	PTR->parity = ENABLED_EVEN;
+	PTR->stop = STOP_2bit;
+	PTR->bitNumber = BitNumber_8;
+	UART_init((UART_ConfigType*)&PTR);
+
+
+
+	/* Initialize the LCD Driver */
+	LCD_init();
+
+
+    while(1)
+    {
+		enterPassword();
+		reEnterPassword();
+		passCompare();
+
+		if(flag == NOT_MATCH){
+			flag = MATCH;
+			continue;
+		}
+
+
+/************************************************************************************/
+/*          SEND THE PASSWORD TO MC2 TO SAVE THE PASS IN THE EEPROM MEMORY          */
+/************************************************************************************/
+		savePass();
+
+/************************************************************************************/
+		LCD_clearScreen();
+		LCD_displayStringRowColumn(0,0,"Welcome Omar");
+		_delay_ms(1000);
+/************************************************************************************/
+/*                                 MAIN OPTIONS                                     */
+/************************************************************************************/
+		while(1){
+			LCD_clearScreen();
+			LCD_displayStringRowColumn(0,0,"Choose option:");
+			LCD_displayStringRowColumn(1,0,"1)Open door");
+			LCD_displayStringRowColumn(2,0,"2)Change Pass");
+			LCD_moveCursor(3,0);
+			key = KEYPAD_getPressedKey();
+			UART_sendByte(key);
+/************************************************************************************/
+/*                                OPEN DOOR OPTION                                  */
+/************************************************************************************/
+			if(key == 1){
+				UART_sendByte(key);
+				_delay_ms(100);
+				while(UART_recieveByte() != ACK){};
+				openDoor();
+				continue;
+			}
+/************************************************************************************/
+/*                             Change Password OPTION                               */
+/************************************************************************************/
+			else if (key == 2){
+				UART_sendByte(key);
+				_delay_ms(100);
+				while(UART_recieveByte() != ACK){};
+				changePass();
+				if(pass == CORRECT){
+					break;
+				}
+				else{
+					pass = CORRECT;
+					continue;
+				}
+
+			}
+		} /* MAIN MENU WHILE 1*/
+
+    } /* APPLICATION WHILE 1*/
+} /* MAIN METHOD*/
+
+
+void enterPassword(void){
+	LCD_clearScreen();
+	LCD_displayStringRowColumn(0,0,"Please Enter");
+	LCD_displayStringRowColumn(1,0,"The Password :");
+
+	for(uint8 i = 0; i<6 ; i++){
+		LCD_moveCursor(2,i);
+		key = KEYPAD_getPressedKey(); /* get the pressed key number */
+
+		if(i!=5){
+			if(((key <= 9) && (key >= 0)) || (key == 42))
+			{
+				LCD_displayCharacter('*');
+				passArray[i] = key;
+				//LCD_intgerToString(key); /* display the pressed keypad switch */
+			}
+			else if(key == 35){
+				i--;
+				//	LCD_displayCharacter(key); /* display the pressed keypad switch */
+			}
+		}
+		else if (i ==5){
+			if(((key <= 9) && (key >= 0)) || (key == 42))
+			{
+				i--;
+			}
+		}
+		_delay_ms(600); /* Press time */
+	}
+}
+
+void reEnterPassword(void){
+	LCD_clearScreen();
+	LCD_displayStringRowColumn(0,0,"Please Re-Enter");
+	LCD_displayStringRowColumn(1,0,"The Password :");
+
+	for(uint8 i = 0; i<6 ; i++){
+		LCD_moveCursor(2,i);
+		key = KEYPAD_getPressedKey(); /* get the pressed key number */
+
+		if(i!=5){
+			if(((key <= 9) && (key >= 0)) || (key == 42))
+			{
+				LCD_displayCharacter('*');
+				rePassArray[i] = key;
+			}
+			else if(key == 35){
+				i--;
+			}
+		}
+		else if (i ==5){
+			if(((key <= 9) && (key >= 0)) || (key == 42))
+			{
+				i--;
+			}
+		}
+		_delay_ms(800); /* Press time */
+	}
+
+}
+void passCompare(void){
+	for(counter = 0 ; counter<5;counter++){
+		if(passArray[counter] != rePassArray[counter]){
+			LCD_clearScreen();
+			LCD_displayStringRowColumn(0,0,"Password Doesn't");
+			LCD_displayStringRowColumn(1,0,"Match Try again");
+			_delay_ms(3000);
+			flag = NOT_MATCH;
+			break;
+		}
+	}
+}
+void savePass(void){
+	UART_sendByte(MC1_DONE);
+	_delay_ms(100);
+	while(UART_recieveByte() != MC2_READY){};
+	UART_sendByte(passArray[0]);
+	_delay_ms(100);
+	UART_sendByte(passArray[1]);
+	_delay_ms(100);
+	UART_sendByte(passArray[2]);
+	_delay_ms(100);
+	UART_sendByte(passArray[3]);
+	_delay_ms(100);
+	UART_sendByte(passArray[4]);
+
+}
+void openDoor(void){
+	LCD_intgerToString(key);
+			_delay_ms(100);
+			LCD_clearScreen();
+			LCD_displayStringRowColumn(0,0,"Open Door");
+			_delay_ms(500);
+
+
+	/*		UART_sendByte(OPEN_DOOR);
+			_delay_ms(100);
+			while(UART_recieveByte() != MC2_READY){};*/
+
+
+			enterPassword();
+
+			savePass();
+
+			for(counter = 0 ; counter<3;counter++){
+				if(UART_recieveByte() == NOT_EQUAL){
+					LCD_clearScreen();
+					LCD_displayStringRowColumn(0,0,"WRONG PASS");
+					_delay_ms(1000);
+					if(counter < 2){
+						enterPassword();
+						savePass();
+					}
+					else{
+						_delay_ms(5000);
+						break;
+					}
+
+				}
+				else{
+					LCD_clearScreen();
+					LCD_displayStringRowColumn(0,0,"Password Correct:");
+					LCD_displayStringRowColumn(2,0,"DOOR OPENING");
+					_delay_ms(7000);
+					_delay_ms(7000);
+		//			TIMER_Init(&config_timePtr,TIMER_1);
+		/*			while(tick<=700){
+						LCD_moveCursor(1, 0);
+						LCD_intgerToString(tick);
+					}*/
+					_delay_ms(100);
+					LCD_displayStringRowColumn(2,0,"DOOR CLOSING");
+					//			TIMER_Init(&config_timePtr,TIMER_1);
+					/*			while(tick<=700){
+											LCD_moveCursor(1, 0);
+											LCD_intgerToString(tick);
+										}*/
+					_delay_ms(7000);
+					_delay_ms(7000);
+					LCD_displayStringRowColumn(0,0,"DOOR CLOSED");
+					_delay_ms(1000);
+					break;
+				}
+			}
+}
+void changePass(void){
+	LCD_intgerToString(key);
+	_delay_ms(500);
+	LCD_clearScreen();
+	LCD_displayStringRowColumn(0,0,"Change Password");
+	_delay_ms(500);
+
+
+/*	UART_sendByte(CHANGE_PASS);
+	_delay_ms(100);
+	while(UART_recieveByte() != MC2_READY){};*/
+
+	enterPassword();
+	savePass();
+	for(counter = 0 ; counter<3;counter++){
+		if(UART_recieveByte() == NOT_EQUAL){
+			pass = NOT_CORRECT;
+			LCD_clearScreen();
+			LCD_displayStringRowColumn(0,0,"WRONG PASS");
+			_delay_ms(1000);
+			if(counter < 2){
+				enterPassword();
+				savePass();
+			}
+			else{
+				_delay_ms(5000);
+				break;
+			}
+
+		}
+		else{
+			pass = CORRECT;
+			LCD_clearScreen();
+			LCD_displayStringRowColumn(0,0,"Password Correct");
+			LCD_displayStringRowColumn(1,0,"Proceed :");
+			_delay_ms(2000);
+			break;
+		}
+	}
+
+}
+/*void Timer_Counter1(void){
+		tick++;
+		if(tick == 710)
+		{
+			TIMER_DeInit(TIMER_1);
+			tick = 0;
+		}
+
+}*/

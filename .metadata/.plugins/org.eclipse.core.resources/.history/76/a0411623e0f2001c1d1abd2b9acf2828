@@ -1,0 +1,55 @@
+ /******************************************************************************
+ *
+ * Module: Timer
+ *
+ * File Name: timer.c
+ *
+ * Description: Source file for the AVR Timer driver
+ *
+ * Author: Omar Adel
+ *
+ *******************************************************************************/
+
+#include"timer.h"
+#include <avr/io.h> /* To use ICU/Timer1 Registers */
+#include <avr/interrupt.h> /* For Timer ISR */
+#include "common_macros.h" /* To use the macros like SET_BIT */
+
+
+
+/*******************************************************************************
+ *                       Interrupt Service Routines                            *
+ *******************************************************************************/
+ISR(TIMER0_OVF_vect){
+
+}
+
+ISR(TIMER0_COMP_vect){
+
+}
+
+/*******************************************************************************
+ *                      Functions Definitions                                  *
+ *******************************************************************************/
+
+void Timer_Init(const TIMER_ConfigType * Config_Ptr , Timer_Number timer){
+
+	if(timer == TIMER0){
+
+		if(Config_Ptr->timerMode == NORMAL){
+			TCCR0 = (1<<FOC0) | (1<<CS00)| (1<<CS02);
+			TCNT0 = Config_Ptr->initialValue;
+			TIMSK = (1<<TOIE0);
+			SREG |= (1<<7);
+		}
+		else if(Config_Ptr->timerMode == COMPARE){
+			TCCR0 = (1<<FOC0) | (1<<CS00)| (1<<CS02)| (1<<WGM01);
+			TCNT0 = Config_Ptr->initialValue;
+			OCR0 = Config_Ptr->compareValue; // Compare register
+			TIMSK = (1<<OCIE0); // Timer compare interrupt Enable
+			SREG |= (1<<7); // Global interrupt Enable
+		}
+
+	}
+
+}

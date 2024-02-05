@@ -1,0 +1,43 @@
+23:57:25 **** Incremental Build of configuration Debug for project Final_Project_MC2 ****
+make all 
+Building file: ../Final_Project_MC2/mc2.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O0 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega16 -DF_CPU=8000000UL -MMD -MP -MF"Final_Project_MC2/mc2.d" -MT"Final_Project_MC2/mc2.o" -c -o "Final_Project_MC2/mc2.o" "../Final_Project_MC2/mc2.c"
+In file included from ../Final_Project_MC2/mc2.c:11:
+c:/winavr-20100110/lib/gcc/../../avr/include/util/delay.h:90:3: warning: #warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+Finished building: ../Final_Project_MC2/mc2.c
+ 
+Building file: ../Final_Project_MC2/timer.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O0 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega16 -DF_CPU=8000000UL -MMD -MP -MF"Final_Project_MC2/timer.d" -MT"Final_Project_MC2/timer.o" -c -o "Final_Project_MC2/timer.o" "../Final_Project_MC2/timer.c"
+../Final_Project_MC2/timer.c: In function 'TIMER_setCallBack':
+../Final_Project_MC2/timer.c:153: warning: function return types not compatible due to 'volatile'
+Finished building: ../Final_Project_MC2/timer.c
+ 
+Building target: Final_Project_MC2.elf
+Invoking: AVR C Linker
+avr-gcc -Wl,-Map,Final_Project_MC2.map -mmcu=atmega16 -o "Final_Project_MC2.elf"  ./Final_Project_MC2/buzzer.o ./Final_Project_MC2/external_eeprom.o ./Final_Project_MC2/gpio.o ./Final_Project_MC2/mc2.o ./Final_Project_MC2/motor.o ./Final_Project_MC2/timer.o ./Final_Project_MC2/twi.o ./Final_Project_MC2/uart.o   
+Finished building target: Final_Project_MC2.elf
+ 
+Invoking: AVR Create Extended Listing
+avr-objdump -h -S Final_Project_MC2.elf  >"Final_Project_MC2.lss"
+Finished building: Final_Project_MC2.lss
+ 
+Invoking: Print Size
+avr-size --format=avr --mcu=atmega16 Final_Project_MC2.elf
+AVR Memory Usage
+----------------
+Device: atmega16
+
+Program:   12670 bytes (77.3% Full)
+(.text + .data + .bootloader)
+
+Data:         35 bytes (3.4% Full)
+(.data + .bss + .noinit)
+
+
+Finished building: sizedummy
+ 
+
+23:57:27 Build Finished. 0 errors, 2 warnings. (took 1s.155ms)
+

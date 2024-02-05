@@ -1,0 +1,35 @@
+/*
+ ============================================================================
+ Name        : mc2.c
+ Author      : Omar Adel
+ Description : MICROController 2 for final project
+ Date        : 22 / 06 / 2022
+ ============================================================================
+ */
+
+#include <util/delay.h> /* For the delay functions */
+#include "keypad.h"
+#include "lcd.h"
+
+int main(void)
+{
+	unsigned char key;
+	LCD_init();
+	LCD_displayStringRowColumn(0,0,"Please Enter the");
+	LCD_displayStringRowColumn(1,0,"Password :");
+	LCD_moveCursor(2,0);
+    while(1)
+    {
+		/* if any switch pressed for more than 500 ms it counts more than one press */
+		key = KEYPAD_getPressedKey(); /* get the pressed key number */
+		if((key <= 9) && (key >= 0))
+		{
+			LCD_intgerToString(key); /* display the pressed keypad switch */
+		}
+		else
+		{
+			LCD_displayCharacter(key); /* display the pressed keypad switch */
+		}
+		_delay_ms(2000); /* Press time */
+    }
+}

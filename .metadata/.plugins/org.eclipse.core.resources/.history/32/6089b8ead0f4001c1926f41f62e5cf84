@@ -1,0 +1,172 @@
+ /******************************************************************************
+ *
+ * Module: Timer
+ *
+ * File Name: timer.c
+ *
+ * Description: Source file for the AVR Timer driver
+ *
+ * Author: Omar Adel
+ *
+ *******************************************************************************/
+
+#include"timer.h"
+#include <avr/io.h> /* To use Timer Registers */
+#include <avr/interrupt.h> /* For Timer ISR */
+#include "common_macros.h" /* To use the macros like SET_BIT */
+
+
+/*******************************************************************************
+ *                           Global Variables                                  *
+ *******************************************************************************/
+
+/* Global variables to hold the address of the call back function in the application */
+static volatile void (*g_callBackPtr)(void) = NULL_PTR;
+
+
+
+/*******************************************************************************
+ *                       Interrupt Service Routines                            *
+ *******************************************************************************/
+ISR(TIMER0_OVF_vect){
+
+	if(g_callBackPtr != NULL_PTR)
+	{
+		/* Call the Call Back function in the application after the edge is detected */
+		(*g_callBackPtr)(); /* another method to call the function using pointer to function g_callBackPtr(); */
+	}
+}
+
+ISR(TIMER0_COMP_vect){
+	if(g_callBackPtr != NULL_PTR)
+	{
+		/* Call the Call Back function in the application after the edge is detected */
+		(*g_callBackPtr)(); /* another method to call the function using pointer to function g_callBackPtr(); */
+	}
+}
+
+
+ISR(TIMER1_OVF_vect){
+	if(g_callBackPtr != NULL_PTR)
+	{
+		/* Call the Call Back function in the application after the edge is detected */
+		(*g_callBackPtr)(); /* another method to call the function using pointer to function g_callBackPtr(); */
+	}
+}
+ISR(TIMER1_COMPA_vect){
+	if(g_callBackPtr != NULL_PTR)
+	{
+		/* Call the Call Back function in the application after the edge is detected */
+		(*g_callBackPtr)(); /* another method to call the function using pointer to function g_callBackPtr(); */
+	}
+}
+
+ISR(TIMER2_OVF_vect){
+	if(g_callBackPtr != NULL_PTR)
+	{
+		/* Call the Call Back function in the application after the edge is detected */
+		(*g_callBackPtr)(); /* another method to call the function using pointer to function g_callBackPtr(); */
+	}
+}
+ISR(TIMER2_COMP_vect){
+	if(g_callBackPtr != NULL_PTR)
+	{
+		/* Call the Call Back function in the application after the edge is detected */
+		(*g_callBackPtr)(); /* another method to call the function using pointer to function g_callBackPtr(); */
+	}
+}
+
+/*******************************************************************************
+ *                      Functions Definitions                                  *
+ *******************************************************************************/
+
+
+
+void TIMER_Init(const TIMER_ConfigType * Config_Ptr , Timer_Number timer){
+
+	if(timer == TIMER_0){
+
+		if(Config_Ptr->timerMode == NORMAL){
+			TCCR0 = (1<<FOC0);
+			TCCR0 = (TCCR0 & 0xF8) || (Config_Ptr->prescaler & 0x07);
+			TCNT0 = Config_Ptr->initialValue;
+			TIMSK = (1<<TOIE0);
+			SREG |= (1<<7);
+		}
+		else if(Config_Ptr->timerMode == COMPARE){
+			TCCR0 = (1<<FOC0) | (1<<WGM01);
+			TCCR0 = (TCCR0 & 0xF8) || (Config_Ptr->prescaler & 0x07);
+			TCNT0 = Config_Ptr->initialValue;
+			OCR0 = Config_Ptr->compareValue; // Compare register
+			TIMSK = (1<<OCIE0); // Timer compare interrupt Enable
+			SREG |= (1<<7); // Global interrupt Enable
+		}
+
+	}
+	else if(timer == TIMER_1){
+
+		if(Config_Ptr->timerMode == NORMAL){
+			TCCR1A = (1<<FOC1A) ;
+			TCCR1B = 0;
+			TCCR1B = (TCCR1B & 0xF8) || (Config_Ptr->prescaler & 0x07);
+			TCNT1 = Config_Ptr->initialValue;
+			TIMSK = (1<<TOIE1); // Timer NORMA interrupt Enable
+			SREG |= (1<<7);
+
+
+		}
+		else if(Config_Ptr->timerMode == COMPARE){
+			TCCR1A = (1<<COM1A1) | (1<<COM1A0) | (1<<FOC1A) ;
+			TCCR1B = (1<<WGM12)  ;
+			TCCR1B = (TCCR1B & 0xF8) || (Config_Ptr->prescaler & 0x07);
+			TCNT1 = Config_Ptr->initialValue;
+			OCR1A = Config_Ptr->compareValue; // Compare register
+			TIMSK = (1<<OCIE1A); // Timer compare interrupt Enable
+			SREG |= (1<<7);
+		}
+
+	}
+	else if (timer == TIMER_2){
+		if(Config_Ptr->timerMode == NORMAL){
+			TCCR2 = (1<<FOC2);
+			TCCR2 = (TCCR2 & 0xF8) || (Config_Ptr->prescaler & 0x07);
+			TCNT2 = Config_Ptr->initialValue;
+			TIMSK = (1<<TOIE2);
+			SREG |= (1<<7);
+		}
+		else if(Config_Ptr->timerMode == COMPARE){
+			TCCR2 = (1<<FOC2) | (1<<WGM21);
+			TCCR2 = (TCCR2 & 0xF8) || (Config_Ptr->prescaler & 0x07);
+			TCNT2 = Config_Ptr->initialValue;
+			OCR2 = Config_Ptr->compareValue; // Compare register
+			TIMSK = (1<<OCIE2); // Timer compare interrupt Enable
+			SREG |= (1<<7); // Global interrupt Enable
+		}
+
+	}
+
+	}
+
+void TIMER_setCallBack(void(*a_ptr)(void))
+{
+	/* Save the address of the Call back function in a global variable */
+	g_callBackPtr = a_ptr;
+}
+
+void TIMER_DeInit(Timer_Number timer){
+	if(timer == TIMER_0){
+		TCCR0 = 0;
+		TCNT0 = 0;
+		TIMSK &= ~(1<<TOIE0) &~(1<<OCIE0);
+	}else if(timer == TIMER_1){
+		TCCR1A = 0;
+		TCCR1B = 0;
+		TCNT1 = 0;
+		TIMSK &= ~(1<<TOIE1) &~(1<<OCIE1A);
+	}
+/*	else if(timer == TIMER_2){
+		TCCR2 = 0;
+		TCNT2 = 0;
+		TIMSK &= ~(1<<TOIE2) &~(1<<OCIE2);
+	}*/
+}

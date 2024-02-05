@@ -1,0 +1,55 @@
+ /******************************************************************************
+ *
+ * Module: Timer
+ *
+ * File Name: timer.h
+ *
+ * Description: Header file for the AVR Timer driver
+ *
+ * Author: Omar Adel
+ *
+ *******************************************************************************/
+#ifndef TIMER_H_
+#define TIMER_H_
+/*******************************************************************************
+ *                         Types Declaration                                   *
+ *******************************************************************************/
+
+typedef enum
+{
+	NORMAL,COMPARE
+}TIMER_Mode;
+
+typedef enum
+{
+	RATE_10 = 10,RATE_300 = 300, RATE_600 = 600, RATE_1200 = 1200, RATE_2400 = 2400, RATE_4800 = 4800,RATE_9600 = 9600, RATE_14400 = 14400, RATE_19200 = 19200, RATE_38400 = 38400
+}TIMER_InitialValue;
+
+typedef enum
+{
+	DISABLED,RESERVED,ENABLED_EVEN,ENABLED_ODD
+}TIMER_CompareValue;
+
+
+typedef enum
+{
+	STOP_1bit,STOP_2bit
+}TIMER_Prescaler;
+
+typedef enum
+{
+	BitNumber_5, BitNumber_6, BitNumber_7, BitNumber_8,BitNumber_9
+}UART_BitNumber;
+
+typedef struct
+{
+	UART_Synch synchType;
+	UART_BaudRate baud_rate;
+	UART_Parity parity;
+	UART_Stop stop;
+	UART_BitNumber bitNumber;
+
+}UART_ConfigType;
+
+
+#endif /* TIMER_H_ */

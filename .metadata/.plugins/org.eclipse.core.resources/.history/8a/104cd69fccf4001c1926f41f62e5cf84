@@ -1,0 +1,263 @@
+/*
+ ============================================================================
+ Name        : mc2.c
+ Author      : Omar Adel
+ Description : MicroController 2 for final project
+ Date        : 24 / 06 / 2022
+ ============================================================================
+ */
+
+#include "external_eeprom.h"
+#include "util/delay.h"
+#include "twi.h"
+#include "buzzer.h"
+#include "motor.h"
+#include "uart.h"
+#include "lcd.h"
+#include "timer.h"
+
+/*******************************************************************************
+ *                                Definitions                                  *
+ *******************************************************************************/
+#define ACK 0x09
+#define MC1_DONE 0x11
+#define MC2_READY 0x19
+#define PASS_COMP 0x12
+#define NOT_EQUAL 0x13
+#define EQUAL 0x14
+#define OPEN_DOOR 0x15
+#define CHANGE_PASS 0x17
+
+/*******************************************************************************
+ *                          Global Variables                                   *
+ *******************************************************************************/
+uint8 passArray[5];
+uint8 counter;
+uint8 memoryArray[5];
+uint8 data =0;
+uint16 tick = 0;
+
+typedef enum FLAG2
+{
+	MATCH,NOT_MATCH
+}FLAG2;
+FLAG2 flag2 = MATCH;
+/*******************************************************************************
+ *                        Functions Prototypes                                 *
+ *******************************************************************************/
+
+void savePassMC2(void);
+void saveInMemory(void);
+void readFromMemory(void);
+void openDoorMC2(void);
+void changePassMC2(void);
+void Timer_Counter(void);
+
+TIMER_ConfigType config_timePtr = {NORMAL,INIT_0,0,F_CPU_1024};
+
+int main(void)
+{
+	TIMER_setCallBack(Timer_Counter);
+
+	/* Initialize the MOTOR & BUZZER Driver */
+	BUZZER_Init();
+	DcMotor_init();
+
+	/* Initialize the LCD Driver for tests*/
+	LCD_init();
+
+	/* Initialize the TWI/I2C Driver */
+	const TWI_ConfigType Config_Ptr = {PRESCALER_1};
+	TWI_init(&Config_Ptr);
+
+
+	/* Initialize the UART Driver */
+    UART_ConfigType *PTR2 ;
+	PTR2->synchType = ASYNCHRONOUS;
+	PTR2->baud_rate = RATE_9600;
+	PTR2->parity = ENABLED_EVEN;
+	PTR2->stop = STOP_2bit;
+	PTR2->bitNumber = BitNumber_8;
+	UART_init((UART_ConfigType*)&PTR2);
+
+
+/************************************************************************************/
+/*                      SAVE IN MEMORY THE FIRST PASSWORD                           */
+/************************************************************************************/
+	savePassMC2();
+	saveInMemory();
+
+	while(1)
+	{
+		_delay_ms(2000);
+		//openDoorMC2();
+		data = UART_recieveByte();
+		if(data == 1){
+			LCD_clearScreen();
+			LCD_displayStringRowColumn(0,0,"OPEN COMMAND");
+			UART_sendByte(ACK);
+			_delay_ms(100);
+			openDoorMC2();
+
+		}
+		else if(data == 2){
+			LCD_clearScreen();
+			LCD_displayStringRowColumn(0,0,"Chnge COMMAND");
+			UART_sendByte(ACK);
+			_delay_ms(100);
+			changePassMC2();
+		}
+
+
+}
+
+
+}
+void savePassMC2(void){
+	while(UART_recieveByte() != MC1_DONE){};
+	_delay_ms(10);
+	UART_sendByte(MC2_READY);
+	passArray[0] = UART_recieveByte();
+//	_delay_ms(100);
+/*	LCD_moveCursor(1, 0);
+	LCD_intgerToString(passArray[0]);*/
+	passArray[1] = UART_recieveByte();
+//	_delay_ms(100);
+/*	LCD_moveCursor(1, 1);
+	LCD_intgerToString(passArray[1]);*/
+	passArray[2] = UART_recieveByte();
+//	_delay_ms(100);
+/*	LCD_moveCursor(1, 2);
+	LCD_intgerToString(passArray[2]);*/
+	passArray[3] = UART_recieveByte();
+//	_delay_ms(100);
+/*	LCD_moveCursor(1, 3);
+	LCD_intgerToString(passArray[3]);*/
+	passArray[4] = UART_recieveByte();
+//	_delay_ms(100);
+/*	LCD_moveCursor(1, 4);
+	LCD_intgerToString(passArray[4]);*/
+}
+void saveInMemory(void){
+	EEPROM_writeByte(0x0311 , passArray[0]);
+	_delay_ms(10);
+	EEPROM_writeByte(0x0322 , passArray[1]);
+	_delay_ms(10);
+	EEPROM_writeByte(0x0333 , passArray[2]);
+	_delay_ms(10);
+	EEPROM_writeByte(0x0344  , passArray[3]);
+	_delay_ms(10);
+	EEPROM_writeByte(0x0355  , passArray[4]);
+}
+void readFromMemory(void){
+	EEPROM_readByte(0x0311 , &memoryArray[0]);
+	EEPROM_readByte(0x0322 , &memoryArray[1]);
+	EEPROM_readByte(0x0333 , &memoryArray[2]);
+	EEPROM_readByte(0x0344 , &memoryArray[3]);
+	EEPROM_readByte(0x0355 , &memoryArray[4]);
+}
+void openDoorMC2(void){
+	savePassMC2();
+	readFromMemory();
+	for(counter = 0 ; counter<5;counter++){
+		if (memoryArray[counter] != passArray[counter]){
+			_delay_ms(100);
+			UART_sendByte(NOT_EQUAL);
+			savePassMC2();
+
+			for(counter = 0 ; counter<5;counter++){
+				if (memoryArray[counter] != passArray[counter]){
+					UART_sendByte(NOT_EQUAL);
+					savePassMC2();
+
+					for(counter = 0 ; counter<5;counter++){
+						if (memoryArray[counter] != passArray[counter]){
+							flag2 = NOT_MATCH;
+							UART_sendByte(NOT_EQUAL);
+							BUZZER_ON();
+							_delay_ms(1000);
+							BUZZER_OFF();
+
+						}
+					}
+				}
+			}
+		}
+	}
+	if (flag2 == MATCH){
+		UART_sendByte(EQUAL);
+		_delay_ms(100);
+		LCD_clearScreen();
+		LCD_displayStringRowColumn(0,0,"DOOR OPENING");
+		DcMotor_Rotate(clockwise);
+		TIMER_Init(&config_timePtr,TIMER_1);
+		LCD_clearScreen();
+		while(tick<=900){
+			LCD_moveCursor(0, 0);
+			LCD_intgerToString(tick);
+		}
+
+    	LCD_displayStringRowColumn(0,0,"DOOR CLOSING");
+		DcMotor_Rotate(antiClockwise);
+		TIMER_Init(&config_timePtr,TIMER_1);
+		while(tick<=900){
+			LCD_moveCursor(0, 0);
+			LCD_intgerToString(tick);
+		}
+		_delay_ms(1000);
+		LCD_displayStringRowColumn(0,0,"DOOR CLOSED");
+		DcMotor_Rotate(stop);
+	/*	LCD_clearScreen();*/
+	}
+	else{
+		flag2 = MATCH;
+	}
+}
+
+void changePassMC2(void){
+	savePassMC2();
+	readFromMemory();
+	for(counter = 0 ; counter<5;counter++){
+		if (memoryArray[counter] != passArray[counter]){
+			_delay_ms(100);
+			UART_sendByte(NOT_EQUAL);
+			savePassMC2();
+
+			for(counter = 0 ; counter<5;counter++){
+				if (memoryArray[counter] != passArray[counter]){
+					UART_sendByte(NOT_EQUAL);
+					savePassMC2();
+
+					for(counter = 0 ; counter<5;counter++){
+						if (memoryArray[counter] != passArray[counter]){
+							flag2 = NOT_MATCH;
+							UART_sendByte(NOT_EQUAL);
+							BUZZER_ON();
+							_delay_ms(5000);
+							BUZZER_OFF();
+
+						}
+					}
+				}
+			}
+		}
+	}
+	if (flag2 == MATCH){
+		UART_sendByte(EQUAL);
+		savePassMC2();
+		saveInMemory();
+	}
+	else{
+		flag2 = MATCH;
+	}
+}
+
+void Timer_Counter(void){
+		tick++;
+		if(tick == 1000)
+		{
+			TIMER_DeInit(TIMER_1);
+			tick = 0;
+		}
+
+}
